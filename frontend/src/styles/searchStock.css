@@ -1,0 +1,26 @@
+.list-group {
+    margin-top: -50px;
+}
+
+.list-group-item {
+    cursor: pointer;
+}
+
+.card {
+    margin-top: 55px;
+}
+
+.date {
+    height: 35px;
+    padding-left: 30px;
+}
+
+.search-btn {
+    margin-left: 10px;
+    width: 160px;
+}
+
+.stock-error {
+    margin-top: 50px;
+}
+
