@@ -10,19 +10,21 @@ const SearchStock = ({ firstName }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [stockName, setStockName] = useState('');
-  const [stockSymbol, setStockSymbol] = useState('');
   const [stockDate, setStockDate] = useState(formatDate(''));
   const [stockClosePrice, setStockClosePrice] = useState(0);
   const [stockLowPrice, setStockLowPrice] = useState(0);
   const [stockHighPrice, setStockHighPrice] = useState(0);
-  const [isErr, setErr] = useState(false);
+  const [isDateErr, setDateErr] = useState(false);
+  const [isAPIErr, setAPIErr] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
   const [stockData, setStockData] = useState({});
+  const [isCardVisible, setCardVisibility] = useState(false);
 
   const clickHandler = async (name, symbol) => {
     setStockName(name);
-    setStockSymbol(symbol);
     setSearchQuery(name + ' (' + symbol + ')');
     setSearchResults([]);
+    setCardVisibility(false);
     await fetchStockPrice(symbol);
   };
 
@@ -36,6 +38,7 @@ const SearchStock = ({ firstName }) => {
 
         } catch (error) {
           console.error('Error fetching stock data:', error);
+          setSearchResults([]);
         }
 
     } else {
@@ -46,20 +49,36 @@ const SearchStock = ({ firstName }) => {
   async function fetchStockPrice(symbol) {
     const res = await fetch(`${BACKEND_URI}/stock/${symbol}`);
     const data = await res.json();
-    setStockData(data);
-    dateChangeHandler(data, '');
+
+    if (res.status === 500) {
+      setAPIErr(true);
+
+    } else {
+      setStockData(data);
+      dateChangeHandler(data, '');
+      setAPIErr(false);
+      setCardVisibility(true);
+    }
+
   };
 
   function dateChangeHandler(data, date) {
     date.length > 0 && setStockDate(date);
-    if (data['Time Series (Daily)'] === undefined || data['Time Series (Daily)'][date || stockDate] === undefined) {
-      setErr(true);
+
+    if (Object.keys(data).length === 0) {
+      setDateErr(false);
+    }
+
+    else if (data['Time Series (Daily)'] === undefined || data['Time Series (Daily)'][date || stockDate] === undefined) {
+      setDateErr(true);
+      setCardVisibility(false);
 
     } else {
       setStockClosePrice(data['Time Series (Daily)'][date || stockDate]['4. close'])
       setStockLowPrice(data['Time Series (Daily)'][date || stockDate]['3. low'])
       setStockHighPrice(data['Time Series (Daily)'][date || stockDate]['2. high'])
-      setErr(false);
+      setDateErr(false);
+      setCardVisibility(true);
     }
   }
 
@@ -90,7 +109,15 @@ const SearchStock = ({ firstName }) => {
       if (searchQuery.trim() === '') {
           setSearchResults([]);
       }
-  }, [searchQuery, isErr]);
+
+      if (isAPIErr) {
+          setErrMsg("Cound not find price");
+
+      } else if (isDateErr) {
+          setErrMsg("Price not listed on this date");
+      }
+
+  }, [searchQuery, isAPIErr, isDateErr]);
 
   return (
     <Container>
@@ -119,8 +146,7 @@ const SearchStock = ({ firstName }) => {
       </ListGroup>
       <br />
       {
-        stockSymbol !== '' ? 
-          !isErr ?
+          !isDateErr && !isAPIErr && isCardVisible ?
             <PriceCard 
               name = { stockName } 
               date = { stockDate } 
@@ -129,8 +155,9 @@ const SearchStock = ({ firstName }) => {
               lowPrice = { stockLowPrice }
               clickHandler = { shareToRecipient }
             /> 
-            : <div className="stock-error">Price not listed not this date</div>
-         : ''
+            : isAPIErr || isDateErr
+              ? <div className="error"> { errMsg } </div>
+              : ''      
       }
     </Container>
   );

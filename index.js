@@ -65,9 +65,15 @@ app.get('/search', async (req, res) => {
 
 app.get('/stock/:symbol', async (req, res) => {
     const { symbol } = req.params;
-    const URI = STOCK_URI + `&function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}`;
+    const URI = STOCK_URI + `&function=TIME_SERIES_DAILY&symbol=${symbol}`;
     const response = await fetch(URI);
     const data = await response.json();
+    // Alphavantage API doesn't return BSE stock prices
+    // So returning a 500 status code for now
+    // Checked this issue on 13 June 2023
+    if (Object.keys(data).includes("Error Message")) {
+        return res.status(500).json({ "message": "Something went wrong!" });
+    }
     res.json(data);
 });
 
